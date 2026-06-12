@@ -1,10 +1,10 @@
-from typing import Dict, Optional, Tuple
-from sympy import Ci
+import argparse
+from typing import Optional
+
 from tqdm import tqdm
 
 import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
 from torchvision.datasets import CIFAR10
 from torchvision import transforms
@@ -14,6 +14,14 @@ from mindiffusion.unet import NaiveUnet
 from mindiffusion.ddpm import DDPM
 
 
+def resolve_device(device: Optional[str], gpu: Optional[int], default: str) -> str:
+    if device is not None:
+        return device
+    if gpu is not None:
+        return f"cuda:{gpu}"
+    return default
+
+
 def train_cifar10(
     n_epoch: int = 100, device: str = "cuda:1", load_pth: Optional[str] = None
 ) -> None:
@@ -21,7 +29,7 @@ def train_cifar10(
     ddpm = DDPM(eps_model=NaiveUnet(3, 3, n_feat=128), betas=(1e-4, 0.02), n_T=1000)
 
     if load_pth is not None:
-        ddpm.load_state_dict(torch.load("ddpm_cifar.pth"))
+        ddpm.load_state_dict(torch.load(load_pth, map_location=device))
 
     ddpm.to(device)
 
@@ -68,5 +76,20 @@ def train_cifar10(
             torch.save(ddpm.state_dict(), f"./ddpm_cifar.pth")
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--gpu", type=int, default=None)
+    parser.add_argument("--device", default=None)
+    parser.add_argument("--load-pth", default=None)
+    args = parser.parse_args()
+
+    train_cifar10(
+        n_epoch=args.epochs,
+        device=resolve_device(args.device, args.gpu, "cuda:1"),
+        load_pth=args.load_pth,
+    )
+
+
 if __name__ == "__main__":
-    train_cifar10()
+    main()

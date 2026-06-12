@@ -8,7 +8,8 @@ Everything is self contained. (Except for pytorch and torchvision... of course)
 run it with `python superminddpm.py`
 """
 
-from typing import Dict, Tuple
+import argparse
+from typing import Dict, Optional, Tuple
 from tqdm import tqdm
 
 import torch
@@ -133,6 +134,14 @@ class DDPM(nn.Module):
         return x_i
 
 
+def resolve_device(device: Optional[str], gpu: Optional[int], default: str) -> str:
+    if device is not None:
+        return device
+    if gpu is not None:
+        return f"cuda:{gpu}"
+    return default
+
+
 def train_mnist(n_epoch: int = 100, device="cuda:0") -> None:
 
     ddpm = DDPM(eps_model=DummyEpsModel(1), betas=(1e-4, 0.02), n_T=1000)
@@ -178,5 +187,18 @@ def train_mnist(n_epoch: int = 100, device="cuda:0") -> None:
             torch.save(ddpm.state_dict(), f"./ddpm_mnist.pth")
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--gpu", type=int, default=None)
+    parser.add_argument("--device", default=None)
+    args = parser.parse_args()
+
+    train_mnist(
+        n_epoch=args.epochs,
+        device=resolve_device(args.device, args.gpu, "cuda:0"),
+    )
+
+
 if __name__ == "__main__":
-    train_mnist()
+    main()

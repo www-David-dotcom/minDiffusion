@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 from tqdm import tqdm
 
@@ -28,6 +28,14 @@ def choose_device() -> str:
     if torch.backends.mps.is_available():
         return "mps"
     return "cpu"
+
+
+def resolve_device(device: Optional[str], gpu: Optional[int]) -> str:
+    if device is not None:
+        return device
+    if gpu is not None:
+        return f"cuda:{gpu}"
+    return choose_device()
 
 
 def mnist_transform() -> transforms.Compose:
@@ -167,29 +175,31 @@ def main() -> None:
     parser.add_argument("--nfe-values", type=parse_nfe_values, default=parse_nfe_values("6,12,18"))
     parser.add_argument("--max-train-batches", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=2)
-    parser.add_argument("--device", default=choose_device())
+    parser.add_argument("--device", default=None)
+    parser.add_argument("--gpu", type=int, default=None)
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
     parser.add_argument("--checkpoint", type=Path, default=Path("ddpm_mnist.pth"))
     parser.add_argument("--output-dir", type=Path, default=Path("contents/mnist_dpm_solver"))
     parser.add_argument("--report", type=Path, default=Path("reports/mnist_dpm_solver_report.md"))
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
+    device = resolve_device(args.device, args.gpu)
 
     torch.manual_seed(args.seed)
     ddpm = DDPM(
         eps_model=NaiveUnet(1, 1, n_feat=args.n_feat),
         betas=(1e-4, 0.02),
         n_T=args.n_T,
-    ).to(args.device)
+    ).to(device)
 
     if args.checkpoint.exists():
-        ddpm.load_state_dict(torch.load(args.checkpoint, map_location=args.device))
+        ddpm.load_state_dict(torch.load(args.checkpoint, map_location=device))
 
     if args.epochs:
         start = time.time()
         train_mnist(
             ddpm,
-            device=args.device,
+            device=device,
             epochs=args.epochs,
             batch_size=args.batch_size,
             lr=args.lr,
@@ -201,12 +211,12 @@ def main() -> None:
         torch.save(ddpm.state_dict(), args.checkpoint)
 
     ddpm.eval()
-    sampler = DPMSolverSampler(ddpm.eps_model, betas=(1e-4, 0.02), n_T=args.n_T).to(args.device)
+    sampler = DPMSolverSampler(ddpm.eps_model, betas=(1e-4, 0.02), n_T=args.n_T).to(device)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     with torch.no_grad():
         for nfe in args.nfe_values:
-            base_noise = torch.randn(args.n_samples, 1, 32, 32, device=args.device)
+            base_noise = torch.randn(args.n_samples, 1, 32, 32, device=device)
             grid = sample_grid(sampler, base_noise, nfe=nfe, nrow=args.n_samples)
             save_image(grid, args.output_dir / f"mnist_nfe_{nfe:03d}_comparison.png")
 
