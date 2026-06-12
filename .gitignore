@@ -1,5 +1,7 @@
 data
 __pycache__
+.pytest_cache/
+._*
 *.pth
 ddpm*.png
 .env

@@ -42,10 +42,23 @@ Currently has:
 - [x] MNIST, CIFAR dataset.
 - [x] Simple unet structure. + Simple Time embeddings.
 - [x] CelebA dataset.
+- [x] DPM-Solver-2 and DPM-Solver-3 samplers.
+
+## DPM-Solver MNIST comparison
+
+`mindiffusion/dpm_solver.py` implements DPM-Solver-1, DPM-Solver-2, and DPM-Solver-3 from the paper equations. DPM-Solver-1 is equivalent to deterministic DDIM, so it is used as the DDIM baseline in the MNIST comparison script.
+
+Run a quick MNIST comparison:
+
+```
+python compare_mnist_samplers.py --epochs 5 --nfe-values 6,12,18
+```
+
+The script writes comparison grids to `contents/mnist_dpm_solver/` and a markdown report to `reports/mnist_dpm_solver_report.md`. For assignment-quality samples, train longer or load an existing `ddpm_mnist.pth` checkpoint and pass `--epochs 0`.
 
 TODOS
 
-- [ ] DDIM
+- [x] DDIM
 - [ ] Classifier Guidance
 - [ ] Multimodality
 
