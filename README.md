@@ -66,3 +66,24 @@ TODOS
 
 - Using more parameter yields better result for MNIST.
 - More comments in superminddpm.py
+
+# Running MNIST comparison of DPM-Solver samplers
+If you want a fresh training,
+```bash
+python3 compare_mnist_samplers.py \
+  --epochs 20 \
+  --batch-size 128 \
+  --n-feat 64 \
+  --n-T 1000 \
+  --nfe-values 6,12,18,24 \
+  --checkpoint ddpm_mnist.pth \
+  --output-dir contents/mnist_dpm_solver \
+  --report reports/mnist_dpm_solver_report.md
+```
+If you alreay have a checkpoint, you can skip training by setting `--epochs 0` and just load the checkpoint:
+```bash
+python3 compare_mnist_samplers.py \
+  --epochs 0 \
+  --nfe-values 6,12,18,24 \
+  --checkpoint ddpm_mnist.pth
+```
